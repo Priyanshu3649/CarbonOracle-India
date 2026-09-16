@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "node16",
+    "moduleResolution": "node16",
+    "target": "es2022"
+  },
+  "include": ["hardhat.config.ts", "blockchain/**/*.ts"]
+}

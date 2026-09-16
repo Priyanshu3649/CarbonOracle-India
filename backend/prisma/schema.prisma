@@ -1,0 +1,132 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password_hash String
+  name          String?
+  role          String   @default("FIELD_AGENT") // ADMIN, SCIENTIST, FIELD_AGENT
+  created_at    DateTime @default(now())
+
+  @@map("users")
+}
+
+model Plot {
+  id          String   @id @default(uuid())
+  plot_name   String
+  description String?
+  created_at  DateTime @default(now())
+
+  trees          Tree[]
+  upload_batches UploadBatch[]
+
+  @@map("plots")
+}
+
+model Species {
+  id                 String   @id @default(uuid())
+  common_name        String
+  scientific_name    String
+  wood_density_g_cm3 Float
+  region             String?
+  remarks            String?
+  created_at         DateTime @default(now())
+
+  trees Tree[]
+
+  @@map("species")
+}
+
+model UploadBatch {
+  id          String   @id @default(uuid())
+  file_name   String
+  plot_id     String
+  row_count   Int
+  uploaded_at DateTime @default(now())
+  notes       String?
+
+  plot Plot @relation(fields: [plot_id], references: [id])
+
+  tree_measurements TreeMeasurement[]
+
+  @@map("upload_batches")
+}
+
+model Tree {
+  id                   String   @id @default(uuid())
+  internal_tree_id     String   @unique
+  plot_id              String
+  species_id           String
+  latitude             Float
+  longitude            Float
+  distance_from_tree_m Float?
+  created_at           DateTime @default(now())
+
+  plot         Plot         @relation(fields: [plot_id], references: [id])
+  species      Species      @relation(fields: [species_id], references: [id])
+  
+  measurements TreeMeasurement[]
+
+  @@unique([latitude, longitude])
+  @@map("trees")
+}
+
+model TreeMeasurement {
+  id                  String   @id @default(uuid())
+  tree_id             String
+  
+  diameter_cm         Float
+  tree_height_m       Float
+  wood_density_g_cm3  Float
+  
+  // Results
+  agb_kg              Float
+  agc_kg              Float
+  bgb_kg              Float
+  bgc_kg              Float
+  total_carbon_kg     Float
+  co2e_kg             Float
+
+  data_source         String   @default("rover") // "rover" or "manual"
+  raw_upload_batch_id String?
+  measured_at         DateTime @default(now())
+
+  tree                Tree         @relation(fields: [tree_id], references: [id], onDelete: Cascade)
+  upload_batch        UploadBatch? @relation(fields: [raw_upload_batch_id], references: [id])
+
+  @@map("tree_measurements")
+}
+
+/// Blockchain integrity record — one per UploadBatch after anchoring on Polygon Amoy.
+/// Stores only hashes and metadata. Never stores private keys or raw data.
+model BlockchainRecord {
+  id                  String    @id @default(uuid())
+  report_id           String    @unique              // corresponds to UploadBatch.id
+  report_hash         String    @db.VarChar(64)     // SHA-256 hex (64 chars)
+  blockchain_network  String    @default("amoy")
+  chain_id            Int       @default(80002)
+  contract_address    String    @default("")
+  transaction_hash    String?   @db.VarChar(66)
+  block_number        Int?
+  explorer_url        String?
+  methodology_version String    @default("CarbonOracle-MRV-v1.0")
+  calculation_version String    @default("CarbonOracle-Calc-v1.0")
+  status              String    @default("PENDING") // PENDING | SUBMITTED | CONFIRMED | FAILED
+  failure_reason      String?   @db.Text
+  recorded_at         DateTime?
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+
+  @@map("blockchain_records")
+}
+

@@ -1,0 +1,46 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_20-82e14840f0ddcfa9e76b092a6b8f8d1a8660a166",
+  "solcVersion": "0.8.20",
+  "solcLongVersion": "0.8.20+commit.a1b79de6",
+  "compilerType": "solc",
+  "userSourceNameMap": {
+    "contracts/CarbonOracleRegistry.sol": "project/contracts/CarbonOracleRegistry.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "shanghai",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode.linkReferences",
+            "evm.bytecode.object",
+            "evm.bytecode.opcodes",
+            "evm.bytecode.sourceMap",
+            "evm.deployedBytecode.immutableReferences",
+            "evm.deployedBytecode.linkReferences",
+            "evm.deployedBytecode.object",
+            "evm.deployedBytecode.opcodes",
+            "evm.deployedBytecode.sourceMap",
+            "evm.methodIdentifiers"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/CarbonOracleRegistry.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\n/**\n * @title CarbonOracleRegistry\n * @notice Provides tamper-evident, timestamped anchoring of CarbonOracle MRV report hashes.\n *\n * IMPORTANT: This contract does NOT create carbon credits, does NOT validate\n * the scientific correctness of carbon calculations, and does NOT constitute\n * regulatory verification. It provides data integrity and audit trail only.\n *\n * Carbon calculation is performed off-chain by the CarbonOracle calculation engine.\n * Blockchain records only the SHA-256 fingerprint of the finalized MRV report.\n */\ncontract CarbonOracleRegistry {\n\n    // ─── State ────────────────────────────────────────────────────────────────\n\n    address public owner;\n\n    struct Report {\n        string  reportId;          // Unique MRV report / upload-batch ID\n        bytes32 reportHash;        // SHA-256 of the canonical MRV report (hex → bytes32)\n        uint256 totalCarbonKg;     // Total carbon (kg), scaled ×1000 to avoid floats\n        uint256 co2eKg;            // CO₂-equivalent (kg), scaled ×1000\n        string  methodologyVersion;// e.g. \"CarbonOracle-MRV-v1.0\"\n        uint256 timestamp;         // Block timestamp at registration\n        bool    exists;            // Guard for duplicate-detection\n    }\n\n    /// reportId → Report\n    mapping(string => Report) private reports;\n\n    /// Ordered list of all registered reportIds (for enumeration)\n    string[] public reportIds;\n\n    // ─── Events ───────────────────────────────────────────────────────────────\n\n    /**\n     * @dev Emitted on every successful report registration.\n     * Indexed fields allow efficient off-chain filtering.\n     */\n    event ReportRegistered(\n        string  indexed reportId,\n        bytes32 indexed reportHash,\n        uint256         totalCarbonKg,\n        uint256         co2eKg,\n        string          methodologyVersion,\n        uint256         timestamp\n    );\n\n    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);\n\n    // ─── Modifiers ────────────────────────────────────────────────────────────\n\n    modifier onlyOwner() {\n        require(msg.sender == owner, \"CarbonOracleRegistry: caller is not owner\");\n        _;\n    }\n\n    modifier reportDoesNotExist(string calldata reportId) {\n        require(\n            !reports[reportId].exists,\n            \"CarbonOracleRegistry: report already registered (use a new version ID)\"\n        );\n        _;\n    }\n\n    modifier reportExists(string calldata reportId) {\n        require(reports[reportId].exists, \"CarbonOracleRegistry: report not found\");\n        _;\n    }\n\n    // ─── Constructor ──────────────────────────────────────────────────────────\n\n    constructor() {\n        owner = msg.sender;\n        emit OwnershipTransferred(address(0), msg.sender);\n    }\n\n    // ─── Write Functions ──────────────────────────────────────────────────────\n\n    /**\n     * @notice Register a finalized MRV report hash on-chain.\n     * @dev Only the authorized CarbonOracle backend wallet (owner) may register.\n     *      Duplicate registrations are rejected — use a versioned reportId instead.\n     *\n     * @param reportId          Unique identifier (e.g. \"BATCH-abc123-V1\")\n     * @param reportHash        SHA-256 hash of the canonical MRV report (as bytes32)\n     * @param totalCarbonKg     Total carbon estimate in kg × 1000 (integer)\n     * @param co2eKg            CO₂-equivalent estimate in kg × 1000 (integer)\n     * @param methodologyVersion Version string of the calculation methodology\n     */\n    function registerReport(\n        string  calldata reportId,\n        bytes32          reportHash,\n        uint256          totalCarbonKg,\n        uint256          co2eKg,\n        string  calldata methodologyVersion\n    )\n        external\n        onlyOwner\n        reportDoesNotExist(reportId)\n    {\n        require(bytes(reportId).length > 0,           \"CarbonOracleRegistry: empty reportId\");\n        require(reportHash != bytes32(0),             \"CarbonOracleRegistry: empty reportHash\");\n        require(bytes(methodologyVersion).length > 0, \"CarbonOracleRegistry: empty methodologyVersion\");\n\n        reports[reportId] = Report({\n            reportId:           reportId,\n            reportHash:         reportHash,\n            totalCarbonKg:      totalCarbonKg,\n            co2eKg:             co2eKg,\n            methodologyVersion: methodologyVersion,\n            timestamp:          block.timestamp,\n            exists:             true\n        });\n\n        reportIds.push(reportId);\n\n        emit ReportRegistered(\n            reportId,\n            reportHash,\n            totalCarbonKg,\n            co2eKg,\n            methodologyVersion,\n            block.timestamp\n        );\n    }\n\n    /**\n     * @notice Transfer ownership to a new backend wallet.\n     */\n    function transferOwnership(address newOwner) external onlyOwner {\n        require(newOwner != address(0), \"CarbonOracleRegistry: zero address\");\n        emit OwnershipTransferred(owner, newOwner);\n        owner = newOwner;\n    }\n\n    // ─── Read Functions (public — anyone can verify) ──────────────────────────\n\n    /**\n     * @notice Retrieve a registered report by ID.\n     * @dev Public — any wallet or tool can independently verify a report.\n     */\n    function getReport(string calldata reportId)\n        external\n        view\n        reportExists(reportId)\n        returns (\n            string  memory reportId_,\n            bytes32        reportHash,\n            uint256        totalCarbonKg,\n            uint256        co2eKg,\n            string  memory methodologyVersion,\n            uint256        timestamp\n        )\n    {\n        Report storage r = reports[reportId];\n        return (\n            r.reportId,\n            r.reportHash,\n            r.totalCarbonKg,\n            r.co2eKg,\n            r.methodologyVersion,\n            r.timestamp\n        );\n    }\n\n    /**\n     * @notice Check whether a report ID has been registered.\n     */\n    function reportExists_(string calldata reportId) external view returns (bool) {\n        return reports[reportId].exists;\n    }\n\n    /**\n     * @notice Total number of registered reports.\n     */\n    function totalReports() external view returns (uint256) {\n        return reportIds.length;\n    }\n}\n"
+      }
+    }
+  }
+}

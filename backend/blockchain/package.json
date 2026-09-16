@@ -1,0 +1,21 @@
+{
+  "name": "carbonoracle-blockchain",
+  "version": "1.0.0",
+  "description": "CarbonOracle blockchain tooling (Hardhat + Solidity)",
+  "type": "module",
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "deploy:amoy": "npx ts-node scripts/deploy-native.ts",
+    "node": "npx hardhat node"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^4.0.15",
+    "@nomicfoundation/hardhat-verify": "^3.0.22",
+    "hardhat": "^3.14.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "ethers": "^6.17.0"
+  }
+}

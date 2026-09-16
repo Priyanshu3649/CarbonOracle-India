@@ -1,0 +1,20 @@
+[
+  {
+    "contractName": "CarbonOracleRegistry",
+    "address": "0x79c1c167CCF61eFF4E9C3B1e66eB7aCa1053d942",
+    "deployer": "0xf3E4d566068D4e9F93C8848ef23f1430Ce41b988",
+    "network": "polygon-amoy",
+    "chainId": 80002,
+    "transactionHash": "0x8b61fe64c0dad0e95e186d3a08f1157cdb98b435f3e0322cd9ccc93e2aea4d80",
+    "deployedAt": "2026-08-21T10:57:13.028Z"
+  },
+  {
+    "contractName": "CarbonOracleRegistry",
+    "address": "0x8c77f8ba3dAD222035fbf664A4bEa85CEde6664c",
+    "deployer": "0xf3E4d566068D4e9F93C8848ef23f1430Ce41b988",
+    "network": "mainnet",
+    "chainId": 137,
+    "transactionHash": "0xcabed78248abfa913d72ad1b0d33c0047c46f3170326d14c9f96186d5296d3f2",
+    "deployedAt": "2026-08-22T00:35:54.612Z"
+  }
+]
