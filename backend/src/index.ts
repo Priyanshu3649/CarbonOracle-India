@@ -19,6 +19,7 @@ app.get('/health', (req, res) => {
 
 import authRouter from './routes/auth';
 import blockchainRouter from './routes/blockchain';
+import marketplaceRouter from './routes/marketplace';
 
 app.use('/api/auth', authRouter);
 app.use('/api/plots', plotsRouter);
@@ -26,6 +27,7 @@ app.use('/api/species', speciesRouter);
 app.use('/api/trees', treesRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/blockchain', blockchainRouter);
+app.use('/api/marketplace', marketplaceRouter);
 
 import http from 'http';
 import { setupWebSocketServer } from './websocket';

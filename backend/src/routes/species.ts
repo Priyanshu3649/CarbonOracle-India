@@ -6,7 +6,20 @@ const router = Router();
 
 router.get('/', async (req, res) => {
   try {
+    const q = ((req.query.q as string) || '').trim();
+    const limit = parseInt((req.query.limit as string) || '500');
+
+    const where = q ? {
+      OR: [
+        { common_name: { contains: q, mode: 'insensitive' as const } },
+        { scientific_name: { contains: q, mode: 'insensitive' as const } },
+        { region: { contains: q, mode: 'insensitive' as const } }
+      ]
+    } : {};
+
     const species = await prisma.species.findMany({
+      where,
+      take: limit > 0 ? limit : undefined,
       include: {
         _count: {
           select: { trees: true }
@@ -17,6 +30,27 @@ router.get('/', async (req, res) => {
     res.json(species);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch species' });
+  }
+});
+
+// GWDD wood density lookup — fuzzy search across 17k+ species (must be before /:id)
+router.get('/lookup', async (req, res) => {
+  try {
+    const q = ((req.query.q as string) || '').trim();
+    if (q.length < 2) return res.json([]);
+    const results = await prisma.woodDensityReference.findMany({
+      where: {
+        OR: [
+          { species: { contains: q, mode: 'insensitive' } },
+          { genus:   { contains: q, mode: 'insensitive' } },
+        ],
+      },
+      take: 10,
+      orderBy: { nb_samples: 'desc' },
+    });
+    res.json(results);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Lookup failed' });
   }
 });
 

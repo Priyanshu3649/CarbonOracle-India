@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -15,8 +15,15 @@ model User {
   email         String   @unique
   password_hash String
   name          String?
-  role          String   @default("FIELD_AGENT") // ADMIN, SCIENTIST, FIELD_AGENT
+  role          String   @default("FIELD_AGENT") // ADMIN, SCIENTIST, FIELD_AGENT, PROJECT_OWNER, BUYER
   created_at    DateTime @default(now())
+
+  owned_projects          CarbonProject[]         @relation("ProjectOwner")
+  owned_credits           CarbonCredit[]          @relation("CreditOwner")
+  retired_credits         CarbonCredit[]          @relation("CreditRetirer")
+  sent_transactions       CreditTransaction[]     @relation("TxSender")
+  received_transactions   CreditTransaction[]     @relation("TxReceiver")
+  retirement_certificates RetirementCertificate[] @relation("CertRetirer")
 
   @@map("users")
 }
@@ -27,8 +34,9 @@ model Plot {
   description String?
   created_at  DateTime @default(now())
 
-  trees          Tree[]
-  upload_batches UploadBatch[]
+  trees           Tree[]
+  upload_batches  UploadBatch[]
+  carbon_projects CarbonProject[]
 
   @@map("plots")
 }
@@ -74,7 +82,7 @@ model Tree {
 
   plot         Plot         @relation(fields: [plot_id], references: [id])
   species      Species      @relation(fields: [species_id], references: [id])
-  
+
   measurements TreeMeasurement[]
 
   @@unique([latitude, longitude])
@@ -84,11 +92,11 @@ model Tree {
 model TreeMeasurement {
   id                  String   @id @default(uuid())
   tree_id             String
-  
+
   diameter_cm         Float
   tree_height_m       Float
   wood_density_g_cm3  Float
-  
+
   // Results
   agb_kg              Float
   agc_kg              Float
@@ -112,17 +120,17 @@ model TreeMeasurement {
 model BlockchainRecord {
   id                  String    @id @default(uuid())
   report_id           String    @unique              // corresponds to UploadBatch.id
-  report_hash         String    @db.VarChar(64)     // SHA-256 hex (64 chars)
+  report_hash         String    // SHA-256 hex (64 chars)
   blockchain_network  String    @default("amoy")
   chain_id            Int       @default(80002)
   contract_address    String    @default("")
-  transaction_hash    String?   @db.VarChar(66)
+  transaction_hash    String?
   block_number        Int?
   explorer_url        String?
   methodology_version String    @default("CarbonOracle-MRV-v1.0")
   calculation_version String    @default("CarbonOracle-Calc-v1.0")
   status              String    @default("PENDING") // PENDING | SUBMITTED | CONFIRMED | FAILED
-  failure_reason      String?   @db.Text
+  failure_reason      String?
   recorded_at         DateTime?
   created_at          DateTime  @default(now())
   updated_at          DateTime  @updatedAt
@@ -130,3 +138,103 @@ model BlockchainRecord {
   @@map("blockchain_records")
 }
 
+// ── GWDD Wood Density Reference (17k+ species from Global Wood Density Database)
+model WoodDensityReference {
+  id             String  @id @default(uuid())
+  species        String
+  genus          String
+  family         String?
+  plant_order    String?
+  plant_group    String?
+  wsg_est        Float
+  wsg_est_trunk  Float?
+  wsg_est_branch Float?
+  wsg_raw        Float?
+  nb_samples     Int     @default(1)
+
+  @@index([species])
+  @@index([genus])
+  @@map("wood_density_reference")
+}
+
+// ── Carbon Marketplace Models ────────────────────────────────────────────────
+
+model CarbonProject {
+  id               String   @id @default(uuid())
+  owner_id         String
+  plot_id          String
+  title            String
+  description      String?
+  methodology      String   @default("CarbonOracle-MRV-v1.0")
+  status           String   @default("DRAFT") // DRAFT | VERIFIED | LISTED | COMPLETED
+  total_credits    Float    @default(0)
+  price_per_credit Float    @default(0)
+  vintage_year     Int
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  owner   User           @relation("ProjectOwner", fields: [owner_id], references: [id])
+  plot    Plot           @relation(fields: [plot_id], references: [id])
+  credits CarbonCredit[]
+
+  @@map("carbon_projects")
+}
+
+model CarbonCredit {
+  id                String    @id @default(uuid())
+  project_id        String
+  serial_number     String    @unique
+  vintage_year      Int
+  quantity_tonnes   Float
+  status            String    @default("AVAILABLE") // AVAILABLE | SOLD | RETIRED
+  current_owner_id  String?
+  retired_by_id     String?
+  retired_at        DateTime?
+  retirement_reason String?
+  created_at        DateTime  @default(now())
+
+  project       CarbonProject         @relation(fields: [project_id], references: [id])
+  current_owner User?                 @relation("CreditOwner",   fields: [current_owner_id], references: [id])
+  retired_by    User?                 @relation("CreditRetirer", fields: [retired_by_id],    references: [id])
+  transactions  CreditTransaction[]
+  certificate   RetirementCertificate?
+
+  @@map("carbon_credits")
+}
+
+model CreditTransaction {
+  id                 String   @id @default(uuid())
+  credit_id          String
+  from_user_id       String?
+  to_user_id         String
+  transaction_type   String   // MINT | SALE | TRANSFER | RETIRE
+  quantity_tonnes    Float
+  price_per_tonne    Float?
+  total_price_usd    Float?
+  blockchain_tx_hash String?
+  status             String   @default("CONFIRMED") // PENDING | CONFIRMED | FAILED
+  created_at         DateTime @default(now())
+
+  credit    CarbonCredit @relation(fields: [credit_id],   references: [id])
+  from_user User?        @relation("TxSender",   fields: [from_user_id], references: [id])
+  to_user   User         @relation("TxReceiver", fields: [to_user_id],   references: [id])
+
+  @@map("credit_transactions")
+}
+
+model RetirementCertificate {
+  id                 String   @id @default(uuid())
+  credit_id          String   @unique
+  retired_by_id      String
+  beneficiary_name   String
+  quantity_tonnes    Float
+  retirement_date    DateTime @default(now())
+  certificate_number String   @unique
+  blockchain_tx_hash String?
+  created_at         DateTime @default(now())
+
+  credit     CarbonCredit @relation(fields: [credit_id],      references: [id])
+  retired_by User         @relation("CertRetirer", fields: [retired_by_id], references: [id])
+
+  @@map("retirement_certificates")
+}

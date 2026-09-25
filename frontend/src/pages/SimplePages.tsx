@@ -121,6 +121,8 @@ export function Plots() {
 
 export function Species() {
   const [species, setSpecies] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
 
@@ -128,11 +130,20 @@ export function Species() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ common_name: '', scientific_name: '', wood_density_g_cm3: '', region: '' });
 
-  const fetchSpecies = () => {
-    api.get('/species').then(res => setSpecies(res.data)).catch(console.error);
+  const fetchSpecies = (query = '') => {
+    setLoading(true);
+    api.get(`/species?q=${encodeURIComponent(query)}&limit=200`)
+      .then(res => setSpecies(res.data))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   };
 
-  useEffect(() => fetchSpecies(), []);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchSpecies(searchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const openForm = (s: any = null) => {
     if (s) {
@@ -163,7 +174,7 @@ export function Species() {
       } else {
         await api.post('/species', formData);
       }
-      fetchSpecies();
+      fetchSpecies(searchTerm);
       closeForm();
     } catch (err) {
       alert('Failed to save species');
@@ -174,7 +185,7 @@ export function Species() {
     if (!window.confirm('Are you sure you want to delete this species?')) return;
     try {
       await api.delete(`/species/${id}`);
-      fetchSpecies();
+      fetchSpecies(searchTerm);
     } catch (err) {
       alert('Failed to delete species');
     }
@@ -183,12 +194,26 @@ export function Species() {
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-brand-dark">Species Density Master</h1>
-        {isAdmin && (
-          <button onClick={() => openForm()} className="bg-brand-green text-white px-4 py-2 rounded-lg flex items-center hover:bg-brand-green-dark transition-colors">
-            <Plus size={18} className="mr-2" /> New Species
-          </button>
-        )}
+        <div>
+          <h1 className="text-2xl font-bold text-brand-dark">Species Density Master</h1>
+          <p className="text-xs text-gray-500 mt-1">
+            Global Wood Density Database (GWDDA v2.2) — <span className="font-semibold text-brand-green">17,260+ Tree Species</span> Indexed
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          <input
+            type="text"
+            placeholder="Search 17,000+ species..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-green/50 w-64"
+          />
+          {isAdmin && (
+            <button onClick={() => openForm()} className="bg-brand-green text-white px-4 py-2 rounded-lg flex items-center hover:bg-brand-green-dark transition-colors">
+              <Plus size={18} className="mr-2" /> New Species
+            </button>
+          )}
+        </div>
       </div>
 
       {isFormOpen && (
@@ -211,7 +236,7 @@ export function Species() {
               <input required type="number" step="0.01" value={formData.wood_density_g_cm3} onChange={e => setFormData({ ...formData, wood_density_g_cm3: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:border-brand-green" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Region / Family</label>
               <input value={formData.region} onChange={e => setFormData({ ...formData, region: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:border-brand-green" />
             </div>
             <div className="col-span-2 mt-4">
@@ -222,12 +247,14 @@ export function Species() {
       )}
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        {loading && <div className="p-4 text-center text-sm text-gray-400">Loading species...</div>}
         <table className="w-full text-left">
           <thead className="bg-gray-50 border-b border-gray-100">
             <tr>
-              <th className="p-4 font-semibold text-sm text-gray-600">Common Name</th>
+              <th className="p-4 font-semibold text-sm text-gray-600">Species / Common Name</th>
               <th className="p-4 font-semibold text-sm text-gray-600">Scientific Name</th>
-              <th className="p-4 font-semibold text-sm text-gray-600">Wood Density</th>
+              <th className="p-4 font-semibold text-sm text-gray-600">Wood Density (g/cm³)</th>
+              <th className="p-4 font-semibold text-sm text-gray-600">Family / Source</th>
               {isAdmin && <th className="p-4 font-semibold text-sm text-gray-600 text-right">Actions</th>}
             </tr>
           </thead>
@@ -237,6 +264,7 @@ export function Species() {
                 <td className="p-4 font-medium">{s.common_name}</td>
                 <td className="p-4 italic text-gray-600">{s.scientific_name}</td>
                 <td className="p-4 text-brand-green font-semibold">{s.wood_density_g_cm3.toFixed(2)}</td>
+                <td className="p-4 text-xs text-gray-500">{s.region || 'GWDDA v2.2'}</td>
                 {isAdmin && (
                   <td className="p-4 text-right">
                     <button onClick={() => openForm(s)} className="text-gray-400 hover:text-blue-600 mx-2"><Edit2 size={16} /></button>
