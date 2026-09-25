@@ -32,6 +32,9 @@ async function main() {
   console.log('🌱 Starting seed...')
 
   // Clear existing data
+  await prisma.visitRequest.deleteMany()
+  await prisma.visit.deleteMany()
+  await prisma.marketplaceListing.deleteMany()
   await prisma.retirementCertificate.deleteMany()
   await prisma.creditTransaction.deleteMany()
   await prisma.carbonCredit.deleteMany()
@@ -44,8 +47,9 @@ async function main() {
   await prisma.plot.deleteMany()
   await prisma.user.deleteMany()
 
-  // ─── Admin User ───────────────────────────────────────────────────
+  // ─── Admin & Seller Users ─────────────────────────────────────────
   const password_hash = await bcrypt.hash('password123', 10)
+  
   await prisma.user.create({
     data: {
       email: 'admin@carbonoracle.com',
@@ -55,6 +59,17 @@ async function main() {
     },
   })
   console.log('✅ Admin user created')
+
+  const sellerUser = await prisma.user.create({
+    data: {
+      email: 'seller@greenx.com',
+      password_hash,
+      name: 'GreenX Energy Corp',
+      role: 'PROJECT_OWNER',
+    },
+  })
+  console.log('✅ Seller user created (seller@greenx.com)')
+
 
   // ─── 10 Plots ─────────────────────────────────────────────────────
   const plotsData = [
@@ -345,8 +360,147 @@ async function main() {
   }
 
   console.log(`✅ ${totalTrees} trees with measurements created across ${plots.length} plots`)
+
+  // ─── Company Projects & Credits (GreenX Energy Corp) ────────────────
+  console.log('🏭 Seeding GreenX Energy Corp projects, credits, listings & visits...')
+
+  // 1. Projects for Plot 0 (Western Ghats) and Plot 2 (Central India)
+  const project1 = await prisma.carbonProject.create({
+    data: {
+      owner_id: sellerUser.id,
+      plot_id: plots[0].id,
+      title: 'Western Ghats Afforestation & Conservation Project',
+      description: 'High-density tropical forest carbon sink under strict MRV protocols.',
+      vintage_year: 2024,
+      total_credits: 45.0,
+      price_per_credit: 25.50,
+      status: 'VERIFIED',
+    },
+  })
+
+  const project2 = await prisma.carbonProject.create({
+    data: {
+      owner_id: sellerUser.id,
+      plot_id: plots[2].id,
+      title: 'Central India Sal Forest Regeneration',
+      description: 'Sal-dominant mixed forest carbon restoration project.',
+      vintage_year: 2025,
+      total_credits: 60.0,
+      price_per_credit: 30.00,
+      status: 'VERIFIED',
+    },
+  })
+
+  // 2. Mint Credits for Project 1 (45 credits)
+  const creditsP1 = []
+  for (let i = 1; i <= 45; i++) {
+    let status = 'AVAILABLE'
+    if (i <= 10) status = 'SOLD'
+    else if (i <= 20) status = 'RETIRED'
+    else if (i <= 30) status = 'AVAILABLE' // Will be listed
+
+    const credit = await prisma.carbonCredit.create({
+      data: {
+        project_id: project1.id,
+        serial_number: `CO-2024-WG-${String(i).padStart(4, '0')}`,
+        vintage_year: 2024,
+        quantity_tonnes: 1.0,
+        status,
+        current_owner_id: sellerUser.id,
+        retired_by_id: status === 'RETIRED' ? sellerUser.id : null,
+        retired_at: status === 'RETIRED' ? new Date() : null,
+        retirement_reason: status === 'RETIRED' ? 'Corporate ESG Offsetting Q3' : null,
+      },
+    })
+    creditsP1.push(credit)
+
+    // Mint Transaction
+    await prisma.creditTransaction.create({
+      data: {
+        credit_id: credit.id,
+        from_user_id: null,
+        to_user_id: sellerUser.id,
+        transaction_type: 'MINT',
+        quantity_tonnes: 1.0,
+        price_per_tonne: 25.50,
+        total_price_usd: 25.50,
+        status: 'CONFIRMED',
+      },
+    })
+  }
+
+  // 3. Create Marketplace Listings for Credits 21-30
+  for (let i = 20; i < 30; i++) {
+    await prisma.marketplaceListing.create({
+      data: {
+        seller_id: sellerUser.id,
+        credit_id: creditsP1[i].id,
+        quantity_listed: 1.0,
+        quantity_available: 1.0,
+        price_per_credit: 25.50,
+        status: 'ACTIVE',
+        currency: 'USD',
+      },
+    })
+  }
+
+  // Add one cancelled listing for demonstration
+  await prisma.marketplaceListing.create({
+    data: {
+      seller_id: sellerUser.id,
+      credit_id: creditsP1[30].id,
+      quantity_listed: 1.0,
+      quantity_available: 1.0,
+      price_per_credit: 28.00,
+      status: 'CANCELLED',
+      currency: 'USD',
+    },
+  })
+
+  // 4. Seeding Visits
+  await prisma.visit.create({
+    data: {
+      company_id: sellerUser.id,
+      plot_id: plots[0].id,
+      visit_type: 'SCHEDULED_MRV',
+      scheduled_date: new Date(Date.now() + 14 * 86400 * 1000), // In 14 days
+      status: 'SCHEDULED',
+      assigned_verifier: 'Dr. Ramesh Kumar (Senior Forestry Auditor)',
+      notes: 'Bi-annual canopy and DBH telemetry audit visit.',
+    },
+  })
+
+  await prisma.visit.create({
+    data: {
+      company_id: sellerUser.id,
+      plot_id: plots[2].id,
+      visit_type: 'AUDIT',
+      scheduled_date: new Date(Date.now() - 30 * 86400 * 1000), // 30 days ago
+      completed_date: new Date(Date.now() - 29 * 86400 * 1000),
+      status: 'COMPLETED',
+      assigned_verifier: 'EcoVerify India Team B',
+      notes: 'Completed initial plot baseline measurement verification.',
+      mrv_summary: '100% tree count verified against rover telemetry. Carbon density verified at 1.45 tCO2e/tree.',
+    },
+  })
+
+  // 5. Seeding Visit Requests
+  await prisma.visitRequest.create({
+    data: {
+      company_id: sellerUser.id,
+      plot_id: plots[0].id,
+      requested_date: new Date(Date.now() + 7 * 86400 * 1000),
+      reason: 'GROWTH_VERIFICATION',
+      description: 'Requesting early verification for newly planted fast-growing Eucalyptus block.',
+      priority: 'HIGH',
+      status: 'PENDING',
+    },
+  })
+
+  console.log('✅ Company projects, credits, listings & visits seeded for GreenX Energy Corp')
   console.log('🌱 Seed complete!')
 }
+
 
 main()
   .catch((e) => {

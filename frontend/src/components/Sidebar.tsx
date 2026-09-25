@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, FileUp, PenTool, Trees, Map, LeafyGreen, Settings, Link2, ShoppingCart, FolderOpen, Wallet } from 'lucide-react';
+import { LayoutDashboard, FileUp, PenTool, Trees, Map, LeafyGreen, Settings, Link2, ShoppingCart, FolderOpen, Wallet, Building } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 
 const Sidebar = () => {
@@ -17,10 +17,12 @@ const Sidebar = () => {
   ];
 
   const marketplaceItems = [
-    { name: 'Marketplace',    path: '/marketplace',               icon: ShoppingCart },
-    { name: 'My Projects',    path: '/marketplace/my-projects',   icon: FolderOpen },
-    { name: 'My Credits',     path: '/marketplace/my-credits',    icon: Wallet },
+    { name: 'Marketplace',       path: '/marketplace',             icon: ShoppingCart },
+    { name: 'Company Dashboard', path: '/company/dashboard',        icon: Building },
+    { name: 'My Projects',       path: '/marketplace/my-projects', icon: FolderOpen },
+    { name: 'My Credits',        path: '/marketplace/my-credits',  icon: Wallet },
   ];
+
 
   const NavItem = ({ name, path, icon: Icon }: { name: string; path: string; icon: any }) => (
     <NavLink

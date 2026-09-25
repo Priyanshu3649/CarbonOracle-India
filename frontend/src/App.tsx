@@ -37,12 +37,42 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+import CompanyLayout from './components/CompanyLayout';
+import CompanyDashboard from './pages/company/CompanyDashboard';
+import CompanyCredits from './pages/company/CompanyCredits';
+import CompanyListings from './pages/company/CompanyListings';
+import CompanyFarms from './pages/company/CompanyFarms';
+import CompanyFarmDetail from './pages/company/CompanyFarmDetail';
+import CompanyVisits from './pages/company/CompanyVisits';
+
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          
+          {/* Company Seller Portal Routes */}
+          <Route
+            path="/company/*"
+            element={
+              <ProtectedRoute>
+                <CompanyLayout>
+                  <Routes>
+                    <Route path="/" element={<Navigate to="/company/dashboard" replace />} />
+                    <Route path="/dashboard" element={<CompanyDashboard />} />
+                    <Route path="/credits" element={<CompanyCredits />} />
+                    <Route path="/marketplace" element={<CompanyListings />} />
+                    <Route path="/farms" element={<CompanyFarms />} />
+                    <Route path="/farms/:id" element={<CompanyFarmDetail />} />
+                    <Route path="/visits" element={<CompanyVisits />} />
+                  </Routes>
+                </CompanyLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Core Public / Admin Portal Routes */}
           <Route
             path="/*"
             element={
@@ -73,3 +103,4 @@ export default function App() {
     </AuthProvider>
   );
 }
+
