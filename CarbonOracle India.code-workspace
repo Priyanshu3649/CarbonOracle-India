@@ -1,34 +1,29 @@
 {
 	"folders": [
 		{
+			"name": "CarbonOracle Main",
 			"path": "."
 		},
 		{
-			"path": "../FocusFlow"
+			"name": "VisionTrack Edge AI",
+			"path": "VisionTrack"
 		},
 		{
-			"path": "../FocusFlow AI"
+			"name": "Backend API",
+			"path": "backend"
 		},
 		{
-			"path": "../GFG"
-		},
-		{
-			"path": "../Hack genesis"
-		},
-		{
-			"path": "../Hackathons"
-		},
-		{
-			"path": "../IEEE INNERVE SENTINEL-X"
-		},
-		{
-			"path": "../Java Practical"
-		},
-		{
-			"path": "../KIRO_HG "
-		},
-		{
-			"path": "../YatraSathi_Backup_20260304_111934"
+			"name": "Frontend Web",
+			"path": "frontend"
 		}
-	]
+	],
+	"settings": {
+		"files.exclude": {
+			"**/.git": true,
+			"**/.DS_Store": true,
+			"**/node_modules": true,
+			"**/.gradle": true,
+			"**/build": true
+		}
+	}
 }

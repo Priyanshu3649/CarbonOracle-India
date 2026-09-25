@@ -1,8 +1,8 @@
 # 🌿 CarbonOracle India
 
-> **A full-stack MRV (Monitoring, Reporting & Verification) platform for forest carbon estimation — powered by allometric science and anchored on-chain.**
+> **A full-stack MRV (Monitoring, Reporting & Verification) platform for forest carbon estimation — powered by allometric science, on-device Edge Computer Vision (VisionTrack), and anchored on-chain.**
 
-CarbonOracle India is a decision-support tool for estimating forest carbon stocks using scientifically validated allometric biomass equations. It supports field data ingestion via CSV uploads or manual entry, provides rich analytics dashboards, and records verified carbon reports immutably on the **Polygon Amoy blockchain**.
+CarbonOracle India is a decision-support platform for estimating forest carbon stocks using scientifically validated allometric biomass equations. It supports field data ingestion via Edge AI mobile telemetry (**VisionTrack**), CSV bulk uploads, or manual entry, provides rich analytics dashboards, and records verified carbon reports immutably on the **Polygon Amoy blockchain**.
 
 > ⚠️ **Disclaimer**: This is a prototype estimation and decision-support tool. It is **not** a formal carbon credit issuance engine.
 
@@ -12,16 +12,17 @@ CarbonOracle India is a decision-support tool for estimating forest carbon stock
 
 | Feature | Description |
 |---|---|
+| 🎯 **Edge AI VisionTrack** | On-device Android computer vision app powered by YOLOv8 TFLite & CameraX for live detection & measurement |
 | 🖥️ **Dashboard** | KPI cards (Total Carbon, CO₂e), species & location breakdown charts |
-| 📤 **CSV Bulk Upload** | Drag-and-drop rover telemetry ingestion via PapaParse with column mapping |
-| ✍️ **Manual Entry** | Real-time carbon preview form with Zod validation |
-| 📋 **Tree Records** | TanStack-powered table with filtering, sorting, and PDF/CSV export |
+| 📤 **CSV Bulk Upload** | Drag-and-drop rover & drone telemetry ingestion via PapaParse with automatic column mapping |
+| ✍️ **Manual Entry** | Real-time carbon calculation preview form with Zod validation |
+| 📋 **Tree Records** | TanStack-powered table with search, sorting, and PDF/CSV export |
 | 🗺️ **Plot Management** | Geo-referenced plots with interactive Leaflet maps |
-| 🔬 **Species Master** | Species database with wood density lookup from the GWDDA dataset |
+| 🔬 **Species Master** | 17,260+ tree species database with wood density lookup from GWDDA v2.2 |
 | 🔗 **Blockchain Reports** | Immutable on-chain carbon reports anchored to Polygon Amoy via Ethers.js |
 | 🛒 **Carbon Marketplace** | Browse and retire tokenised carbon credits |
 | 🔐 **Authentication** | JWT-based login with bcrypt password hashing |
-| 📡 **WebSocket** | Real-time calculation updates streamed to the frontend |
+| 📡 **WebSocket** | Real-time calculation updates & live rover streaming to the frontend |
 
 ---
 
@@ -29,21 +30,26 @@ CarbonOracle India is a decision-support tool for estimating forest carbon stock
 
 ```
 CarbonOracle-main/
-├── frontend/              # React 19 + TypeScript + Vite + Tailwind CSS
+├── VisionTrack/           # Mobile Edge AI App (Android, Kotlin, YOLOv8 TFLite, CameraX)
+│   ├── app/               # Jetpack Compose UI, Room DB, Hilt DI, ML Analyzer
+│   ├── ml_pipeline/       # YOLOv8 export & quantization scripts
+│   └── datasets/          # COCO dataset & bounding box training samples
+│
+├── frontend/              # Web App (React 19 + TypeScript + Vite + Tailwind CSS)
 │   └── src/
 │       ├── pages/         # Dashboard, ManualEntry, UploadCsv, TreeRecords,
 │       │                  # Marketplace, MyCredits, MyProjects, BlockchainReports…
-│       ├── components/    # Shared UI components
+│       ├── components/    # Shared UI components & SearchableSelect
 │       └── lib/           # API client, calculation helpers
 │
 ├── backend/               # Express 5 + Node.js + Prisma ORM + TypeScript
 │   ├── src/
 │   │   ├── routes/        # analytics, auth, blockchain, marketplace,
-│   │   │                  # plots, species, trees
-│   │   ├── services/      # Calculation & parser services
-│   │   ├── websocket.ts   # WS server for real-time updates
+│   │   │                  # plots, species (17k+ GWDDA dataset search), trees
+│   │   ├── services/      # Allometric calculation & parser services
+│   │   ├── websocket.ts   # WS server for real-time edge telemetry
 │   │   └── index.ts       # App entry point
-│   ├── prisma/            # Schema & migrations
+│   ├── prisma/            # Schema, migrations & GWDDA 17,260-species seed scripts
 │   └── blockchain/        # Hardhat project + Solidity smart contracts
 │       └── contracts/
 │           └── CarbonOracleRegistry.sol
@@ -51,6 +57,18 @@ CarbonOracle-main/
 ├── docker-compose.yml     # PostgreSQL 15 database
 └── gwddagg_v2.2_species.csv  # Global Wood Density Database (GWDDA v2.2)
 ```
+
+---
+
+## 🎯 VisionTrack (Mobile Edge AI Engine)
+
+**VisionTrack** is the mobile computer vision capture module for CarbonOracle India:
+
+* **Framework**: Android 13+ (Kotlin 2.0, Jetpack Compose, Material 3)
+* **ML Model**: **YOLOv8n TensorFlow Lite** (INT8 quantized, ~25ms inference latency on ARM64)
+* **Camera Input**: CameraX `ImageAnalysis` (RGBA_8888, zero-allocation frame buffer)
+* **Local Persistence**: Room DB session logging with rolling FPS/Latency HUD
+* **Telemetry Streaming**: Real-time DBH & height measurement payload delivery to backend WebSockets
 
 ---
 
@@ -83,33 +101,17 @@ All biomass estimates use the **Chave et al. pantropical allometric equation**:
 
 ## 🛠️ Tech Stack
 
-### Frontend
-| Technology | Purpose |
-|---|---|
-| React 19 + TypeScript | UI framework |
-| Vite 5 | Build tool & dev server |
-| Tailwind CSS 3 | Utility-first styling |
-| Recharts | Data visualisation charts |
-| TanStack Table v8 | Advanced data tables |
-| React Leaflet | Interactive maps |
-| PapaParse | CSV parsing in-browser |
-| React Hook Form + Zod | Form management & validation |
-| jsPDF + jspdf-autotable | PDF export |
-| Lucide React | Icon library |
-| Axios | HTTP client |
-| Vite PWA | Progressive Web App support |
-
-### Backend
-| Technology | Purpose |
-|---|---|
-| Express 5 + Node.js | REST API server |
-| Prisma ORM 6 | Database access layer |
-| MySQL / PostgreSQL | Relational database |
-| JWT + bcryptjs | Authentication |
-| ws | WebSocket server |
-| Ethers.js v6 | Blockchain interaction |
-| Hardhat 3 | Smart contract toolchain |
-| TypeScript 5 | Type safety |
+### Web & Mobile Stack
+| Layer | Technology | Purpose |
+|---|---|---|
+| **Mobile AI** | Android + Kotlin + YOLOv8 TFLite | Real-time camera object detection & telemetry |
+| **Frontend** | React 19 + TypeScript + Vite | Web dashboard UI |
+| **Styling** | Tailwind CSS 3 | Modern glassmorphic styling |
+| **Visualisation** | Recharts + Leaflet | Analytics & geo-referenced plot mapping |
+| **Backend API** | Express 5 + Node.js + TypeScript | REST & WebSocket server |
+| **Database** | PostgreSQL 15 + Prisma ORM 6 | Relational database & seed pipeline |
+| **Dataset** | GWDDA v2.2 (17,260 species) | Wood density reference dataset |
+| **Blockchain** | Solidity + Hardhat 3 + Ethers.js v6 | Polygon Amoy proof-of-integrity ledger |
 
 ---
 
@@ -119,7 +121,7 @@ All biomass estimates use the **Chave et al. pantropical allometric equation**:
 - Node.js ≥ 18
 - npm ≥ 9
 - Docker & Docker Compose (for PostgreSQL)
-- An [Alchemy](https://dashboard.alchemy.com) API key (for blockchain features)
+- Android Studio Ladybug / Koala (for VisionTrack app compilation)
 
 ---
 
@@ -138,103 +140,44 @@ cd CarbonOracle-India
 docker-compose up -d
 ```
 
-This starts a **PostgreSQL 15** instance on port `5432`.
-
 ---
 
-### 3. Configure the Backend
+### 3. Configure & Seed the Backend
 
 ```bash
 cd backend
 cp .env.example .env
-```
 
-Edit `.env` and fill in:
-
-```env
-DATABASE_URL="postgresql://postgres:password@localhost:5432/carbonoracle"
-JWT_SECRET=your_strong_jwt_secret
-
-# Blockchain (optional — required for on-chain reports)
-POLYGON_RPC_URL=https://polygon-amoy.g.alchemy.com/v2/YOUR_ALCHEMY_API_KEY
-BLOCKCHAIN_PRIVATE_KEY=0x_YOUR_PRIVATE_KEY
-CARBON_ORACLE_CONTRACT_ADDRESS=0x_DEPLOYED_CONTRACT_ADDRESS
-```
-
----
-
-### 4. Install & Migrate Backend
-
-```bash
 npm install
 npx prisma migrate dev
-npx prisma db seed     # Seeds plots, species, and sample tree records
-npm run dev            # Starts API server on http://localhost:5010
+npx prisma db seed           # Seeds plots, default species, and sample tree records
+npx ts-node prisma/seed-gwdd.ts  # Seeds all 17,260 GWDDA species
+npm run dev                  # Starts server on http://localhost:5010
 ```
 
 ---
 
-### 5. Install & Start Frontend
+### 4. Install & Start Frontend
 
 Open a new terminal:
 
 ```bash
 cd frontend
 npm install
-npm run dev            # Starts Vite dev server on http://localhost:5173
+npm run dev                  # Starts Vite dev server on http://localhost:5173 (or 5174)
 ```
 
-Visit **[http://localhost:5173](http://localhost:5173)** in your browser.
+Visit **[http://localhost:5174](http://localhost:5174)** in your browser.
 
 ---
 
-### 6. (Optional) Deploy the Smart Contract
+### 5. (Optional) Run VisionTrack Mobile App
+
+Open the `VisionTrack` directory in **Android Studio**:
 
 ```bash
-cd backend
-npm run compile:contract    # Compile Solidity
-npm run deploy:contract     # Deploy to Polygon Amoy
+# Open VisionTrack folder in Android Studio and run on an Android Device / Emulator (API 26+)
 ```
-
-After deployment, copy the contract address into your `.env`:
-```env
-CARBON_ORACLE_CONTRACT_ADDRESS=0x_YOUR_DEPLOYED_ADDRESS
-```
-
----
-
-## 🌐 API Endpoints
-
-| Method | Route | Description |
-|---|---|---|
-| `POST` | `/auth/login` | Authenticate user, returns JWT |
-| `GET` | `/plots` | List all monitored plots |
-| `GET` | `/plots/:id` | Get single plot details |
-| `GET` | `/species` | List species master data |
-| `GET` | `/trees` | List all tree records |
-| `POST` | `/trees/manual` | Add a single tree record |
-| `POST` | `/trees/csv` | Bulk upload tree records from CSV |
-| `GET` | `/analytics/dashboard` | Aggregated KPIs for dashboard |
-| `GET` | `/blockchain` | Fetch on-chain carbon reports |
-| `POST` | `/blockchain/anchor` | Anchor a carbon report on-chain |
-| `GET` | `/marketplace` | Browse available carbon credits |
-
----
-
-## 📂 Data
-
-The repository includes **`gwddagg_v2.2_species.csv`** — the Global Wood Density Database (GWDDA v2.2) — used to look up wood density (WD) values for species not manually configured, enabling more accurate AGB estimates.
-
----
-
-## 🗺️ Roadmap
-
-- [ ] Production PostgreSQL deployment guide
-- [ ] Role-based access control (Admin / Researcher / Auditor)
-- [ ] Satellite imagery integration for automated canopy estimation
-- [ ] IPFS-pinned PDF reports linked to on-chain records
-- [ ] Multi-project portfolio dashboard
-- [ ] Export reports in Gold Standard / Verra VCS format
 
 ---
 
