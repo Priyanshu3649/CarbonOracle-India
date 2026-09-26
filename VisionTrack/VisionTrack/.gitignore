@@ -1,0 +1,48 @@
+.gradle/
+build/
+**/build/
+*.apk
+*.aab
+*.hprof
+local.properties
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+google-services.json
+app/src/main/assets/yolov8n.tflite
+
+# Python Virtual Environments (1.9GB+ each – NEVER commit)
+yolo-env/
+myenv/
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# ML Training outputs / large weights
+runs/
+outputs/
+wandb/
+checkpoints/
+*.pt
+*.pth
+*.onnx
+*.engine
+*.trt
+*.tflite
+
+# Native binaries
+*.so
+*.dylib
+*.dll
+*.a
+*.o
+
+# Large datasets (generated)
+datasets/

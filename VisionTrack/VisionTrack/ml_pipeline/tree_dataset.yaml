@@ -1,0 +1,8 @@
+# VisionTrack Tree Detection Dataset Configuration
+path: ../datasets/trees
+train: images/train
+val:   images/val
+
+# Classes
+nc: 1
+names: ['tree']

@@ -1,0 +1,78 @@
+# ─── Python Virtual Environments ─────────────────────────────────────────────
+yolo-env/
+myenv/
+venv/
+.venv/
+env/
+**/yolo-env/
+**/myenv/
+**/venv/
+**/.venv/
+
+# ─── Python Cache / Bytecode ──────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+
+# ─── Large ML Model Weights (>50MB – keep .pt only if small enough) ──────────
+*.pt
+*.pth
+*.onnx
+*.engine
+*.trt
+*.bin
+# TFLite models (12 MB each – exclude from root, keep in assets only via negation)
+# Uncomment below to also exclude tflite from assets (recommended for large models):
+# *.tflite
+
+# ─── ML Training Outputs ─────────────────────────────────────────────────────
+runs/
+outputs/
+wandb/
+mlruns/
+lightning_logs/
+checkpoints/
+
+# ─── Android Build Outputs ───────────────────────────────────────────────────
+**/build/
+.gradle/
+**/local.properties
+*.apk
+*.aab
+*.aar
+*.ap_
+*.dex
+*.class
+
+# ─── Gradle Cache / Wrapper internals ────────────────────────────────────────
+.gradle/
+gradle/wrapper/gradle-wrapper.jar
+**/.gradle/
+
+# ─── Android Keystore ────────────────────────────────────────────────────────
+*.keystore
+*.jks
+release.properties
+
+# ─── IDE / Editor ────────────────────────────────────────────────────────────
+.idea/
+*.iml
+*.iws
+*.ipr
+.DS_Store
+Thumbs.db
+
+# ─── Native Binaries (the files that broke the push) ─────────────────────────
+*.so
+*.dylib
+*.dll
+*.a
+*.lib
+*.o
+
+# ─── Dataset / Large Image Datasets ──────────────────────────────────────────
+# (comment out if you want to track small datasets like coco8)
+# datasets/
