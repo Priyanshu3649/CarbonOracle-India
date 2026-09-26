@@ -14,7 +14,6 @@ const exactMatches: Record<string, string> = {
   "Ficus religiosa": "Peepal",
   "Terminalia arjuna": "Arjun",
   "Aegle marmelos": "Bael",
-  "Albizzia lebbek": "Siris",
   "Artocarpus heterophylla": "Jackfruit",
   "Bombax ceiba": "Red Silk Cotton Tree",
   "Butea monosperma": "Palash",
@@ -157,23 +156,23 @@ async function main() {
     } else {
       // Extract Genus (first word)
       const genus = s.scientific_name.split(' ')[0];
-      
+
       if (genusMatches[genus]) {
         // e.g. "Acacia Species"
         let newName = genusMatches[genus];
-        
+
         // If the species name contains spp or sp, format nicely
         if (s.scientific_name.includes('spp.') || s.scientific_name.includes('sp.')) {
-           newName = `${newName} (Various ${genus} species)`;
+          newName = `${newName} (Various ${genus} species)`;
         } else {
-           // Provide Genus generic but keep specific part in parenthesis
-           const specificEpithet = s.scientific_name.split(' ').slice(1).join(' ').replace('spp.', '').replace('sp.', '').trim();
-           if (specificEpithet.length > 0) {
-              // e.g "Acacia (Arabica)"
-              newName = `${newName} (${specificEpithet.charAt(0).toUpperCase() + specificEpithet.slice(1)})`;
-           }
+          // Provide Genus generic but keep specific part in parenthesis
+          const specificEpithet = s.scientific_name.split(' ').slice(1).join(' ').replace('spp.', '').replace('sp.', '').trim();
+          if (specificEpithet.length > 0) {
+            // e.g "Acacia (Arabica)"
+            newName = `${newName} (${specificEpithet.charAt(0).toUpperCase() + specificEpithet.slice(1)})`;
+          }
         }
-        
+
         await prisma.species.update({
           where: { id: s.id },
           data: { common_name: newName }
