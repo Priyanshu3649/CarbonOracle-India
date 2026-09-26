@@ -2,7 +2,24 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { useAuth } from '../lib/AuthContext';
-import { Leaf } from 'lucide-react';
+import { Leaf, Zap, ShieldCheck, Building } from 'lucide-react';
+
+const DEMO_ACCOUNTS = [
+  {
+    label: 'Admin (CarbonOracle)',
+    email: 'admin@carbonoracle.com',
+    password: 'password123',
+    icon: ShieldCheck,
+    color: 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100',
+  },
+  {
+    label: 'Seller (GreenX Corp)',
+    email: 'seller@greenx.com',
+    password: 'password123',
+    icon: Building,
+    color: 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100',
+  },
+];
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -23,6 +40,12 @@ export default function Login() {
     }
   };
 
+  const quickFill = (e: string, p: string) => {
+    setEmail(e);
+    setPassword(p);
+    setError('');
+  };
+
   return (
     <div className="min-h-screen bg-brand-light flex items-center justify-center p-4">
       <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 w-full max-w-md">
@@ -39,6 +62,32 @@ export default function Login() {
             {error}
           </div>
         )}
+
+        {/* Demo Quick-Fill */}
+        <div className="mb-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Zap size={13} className="text-amber-500" />
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Demo Accounts</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {DEMO_ACCOUNTS.map((acc) => {
+              const Icon = acc.icon;
+              return (
+                <button
+                  key={acc.email}
+                  type="button"
+                  onClick={() => quickFill(acc.email, acc.password)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${acc.color}`}
+                >
+                  <Icon size={13} />
+                  {acc.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="border-t border-gray-100 mb-5" />
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>

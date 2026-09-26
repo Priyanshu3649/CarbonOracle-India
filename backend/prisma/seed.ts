@@ -50,11 +50,11 @@ async function main() {
   // ─── Admin & Seller Users ─────────────────────────────────────────
   const password_hash = await bcrypt.hash('password123', 10)
   
-  await prisma.user.create({
+  const adminUser = await prisma.user.create({
     data: {
       email: 'admin@carbonoracle.com',
       password_hash,
-      name: 'System Admin',
+      name: 'CarbonOracle India Ltd.',
       role: 'ADMIN',
     },
   })
@@ -498,6 +498,245 @@ async function main() {
   })
 
   console.log('✅ Company projects, credits, listings & visits seeded for GreenX Energy Corp')
+
+  // ─── Admin / CarbonOracle India Company Data ──────────────────────
+  console.log('🏛️ Seeding CarbonOracle India Ltd. (admin) projects, credits, listings & visits...')
+
+  // Admin Projects
+  const adminProject1 = await prisma.carbonProject.create({
+    data: {
+      owner_id: adminUser.id,
+      plot_id: plots[1].id, // Sundarbans Mangrove Reserve
+      title: 'Sundarbans Mangrove Carbon Sequestration',
+      description: 'Large-scale mangrove restoration carbon project under India Carbon Credit Market norms.',
+      vintage_year: 2024,
+      total_credits: 80.0,
+      price_per_credit: 35.00,
+      status: 'VERIFIED',
+    },
+  })
+
+  const adminProject2 = await prisma.carbonProject.create({
+    data: {
+      owner_id: adminUser.id,
+      plot_id: plots[3].id, // Himalayan Temperate Zone
+      title: 'Himalayan Temperate Forest Conservation',
+      description: 'High-altitude conifer belt conservation and afforestation in Uttarakhand.',
+      vintage_year: 2025,
+      total_credits: 55.0,
+      price_per_credit: 42.00,
+      status: 'VERIFIED',
+    },
+  })
+
+  const adminProject3 = await prisma.carbonProject.create({
+    data: {
+      owner_id: adminUser.id,
+      plot_id: plots[8].id, // Urban Plantation Delhi NCR
+      title: 'Delhi NCR Urban Greening Initiative',
+      description: 'Urban plantation and carbon offsetting programme for Delhi NCR corridor.',
+      vintage_year: 2025,
+      total_credits: 30.0,
+      price_per_credit: 28.00,
+      status: 'PENDING',
+    },
+  })
+
+  // Admin Credits – Project 1 (80 credits: mix of SOLD/RETIRED/AVAILABLE/LISTED)
+  const adminCreditsP1: any[] = []
+  for (let i = 1; i <= 80; i++) {
+    let status = 'AVAILABLE'
+    if (i <= 15) status = 'SOLD'
+    else if (i <= 30) status = 'RETIRED'
+    else if (i <= 55) status = 'AVAILABLE' // 25 available – some will be listed
+
+    const credit = await prisma.carbonCredit.create({
+      data: {
+        project_id: adminProject1.id,
+        serial_number: `CO-2024-SU-${String(i).padStart(4, '0')}`,
+        vintage_year: 2024,
+        quantity_tonnes: 1.0,
+        status,
+        current_owner_id: adminUser.id,
+        retired_by_id: status === 'RETIRED' ? adminUser.id : null,
+        retired_at: status === 'RETIRED' ? new Date('2024-09-15') : null,
+        retirement_reason: status === 'RETIRED' ? 'Corporate ESG offset – Tata Group Q3' : null,
+      },
+    })
+    adminCreditsP1.push(credit)
+
+    await prisma.creditTransaction.create({
+      data: {
+        credit_id: credit.id,
+        from_user_id: null,
+        to_user_id: adminUser.id,
+        transaction_type: 'MINT',
+        quantity_tonnes: 1.0,
+        price_per_tonne: 35.00,
+        total_price_usd: 35.00,
+        status: 'CONFIRMED',
+      },
+    })
+  }
+
+  // Admin Credits – Project 2 (55 credits)
+  const adminCreditsP2: any[] = []
+  for (let i = 1; i <= 55; i++) {
+    let status = 'AVAILABLE'
+    if (i <= 8) status = 'SOLD'
+    else if (i <= 16) status = 'RETIRED'
+
+    const credit = await prisma.carbonCredit.create({
+      data: {
+        project_id: adminProject2.id,
+        serial_number: `CO-2025-HM-${String(i).padStart(4, '0')}`,
+        vintage_year: 2025,
+        quantity_tonnes: 1.0,
+        status,
+        current_owner_id: adminUser.id,
+        retired_by_id: status === 'RETIRED' ? adminUser.id : null,
+        retired_at: status === 'RETIRED' ? new Date('2025-03-10') : null,
+        retirement_reason: status === 'RETIRED' ? 'Infosys Net-Zero 2030 commitment' : null,
+      },
+    })
+    adminCreditsP2.push(credit)
+
+    await prisma.creditTransaction.create({
+      data: {
+        credit_id: credit.id,
+        from_user_id: null,
+        to_user_id: adminUser.id,
+        transaction_type: 'MINT',
+        quantity_tonnes: 1.0,
+        price_per_tonne: 42.00,
+        total_price_usd: 42.00,
+        status: 'CONFIRMED',
+      },
+    })
+  }
+
+  // Admin Credits – Project 3 (30 credits, all AVAILABLE)
+  const adminCreditsP3: any[] = []
+  for (let i = 1; i <= 30; i++) {
+    const credit = await prisma.carbonCredit.create({
+      data: {
+        project_id: adminProject3.id,
+        serial_number: `CO-2025-DL-${String(i).padStart(4, '0')}`,
+        vintage_year: 2025,
+        quantity_tonnes: 1.0,
+        status: 'AVAILABLE',
+        current_owner_id: adminUser.id,
+      },
+    })
+    adminCreditsP3.push(credit)
+
+    await prisma.creditTransaction.create({
+      data: {
+        credit_id: credit.id,
+        from_user_id: null,
+        to_user_id: adminUser.id,
+        transaction_type: 'MINT',
+        quantity_tonnes: 1.0,
+        price_per_tonne: 28.00,
+        total_price_usd: 28.00,
+        status: 'CONFIRMED',
+      },
+    })
+  }
+
+  // Admin Marketplace Listings (8 active listings from Project 1)
+  for (let i = 30; i < 38; i++) {
+    await prisma.marketplaceListing.create({
+      data: {
+        seller_id: adminUser.id,
+        credit_id: adminCreditsP1[i].id,
+        quantity_listed: 1.0,
+        quantity_available: 1.0,
+        price_per_credit: 35.00,
+        status: 'ACTIVE',
+        currency: 'USD',
+      },
+    })
+  }
+
+  // One sold listing (demonstration)
+  await prisma.marketplaceListing.create({
+    data: {
+      seller_id: adminUser.id,
+      credit_id: adminCreditsP1[0].id,
+      quantity_listed: 1.0,
+      quantity_available: 0.0,
+      price_per_credit: 35.00,
+      status: 'SOLD',
+      currency: 'USD',
+    },
+  })
+
+  // Admin Visits
+  await prisma.visit.create({
+    data: {
+      company_id: adminUser.id,
+      plot_id: plots[1].id,
+      visit_type: 'SCHEDULED_MRV',
+      scheduled_date: new Date(Date.now() + 7 * 86400 * 1000),
+      status: 'SCHEDULED',
+      assigned_verifier: 'Dr. Meera Joshi (UNFCCC Accredited Auditor)',
+      notes: 'Quarterly canopy height and biomass verification for Sundarbans plot.',
+    },
+  })
+
+  await prisma.visit.create({
+    data: {
+      company_id: adminUser.id,
+      plot_id: plots[3].id,
+      visit_type: 'AUDIT',
+      scheduled_date: new Date(Date.now() - 60 * 86400 * 1000),
+      completed_date: new Date(Date.now() - 58 * 86400 * 1000),
+      status: 'COMPLETED',
+      assigned_verifier: 'GreenCert Asia Pacific – Team A',
+      notes: 'Baseline carbon density audit complete.',
+      mrv_summary: 'DBH telemetry matched rover data at 99.2% confidence. Carbon stock: 1.82 tCO2e/tree avg.',
+    },
+  })
+
+  await prisma.visit.create({
+    data: {
+      company_id: adminUser.id,
+      plot_id: plots[8].id,
+      visit_type: 'INSPECTION',
+      scheduled_date: new Date(Date.now() + 21 * 86400 * 1000),
+      status: 'SCHEDULED',
+      assigned_verifier: 'Delhi Forestry Dept. – Verification Cell',
+      notes: 'First plot boundary and species confirmation visit before credit issuance.',
+    },
+  })
+
+  // Admin Visit Requests
+  await prisma.visitRequest.create({
+    data: {
+      company_id: adminUser.id,
+      plot_id: plots[1].id,
+      requested_date: new Date(Date.now() + 3 * 86400 * 1000),
+      reason: 'GROWTH_VERIFICATION',
+      description: 'Urgent re-verification needed after cyclone impact on Sundarbans north section.',
+      priority: 'HIGH',
+      status: 'PENDING',
+    },
+  })
+
+  await prisma.visitRequest.create({
+    data: {
+      company_id: adminUser.id,
+      plot_id: plots[3].id,
+      requested_date: new Date(Date.now() + 45 * 86400 * 1000),
+      reason: 'ANNUAL_AUDIT',
+      description: 'Scheduled annual carbon stock audit for vintage 2025 credit issuance cycle.',
+      priority: 'MEDIUM',
+      status: 'APPROVED',
+    },
+  })
+
+  console.log('✅ Admin company projects (3), credits (165), listings, visits & requests seeded')
   console.log('🌱 Seed complete!')
 }
 
